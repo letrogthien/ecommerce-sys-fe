@@ -148,7 +148,7 @@ const RefundManagement: React.FC = () => {
         // Fetch refunds and orders in parallel
         const [refundsResponse, ordersResponse] = await Promise.allSettled([
           transactionApi.getRefundsByBuyer(),
-          transactionApi.getOrdersByBuyer(user.id, { status: 'COMPLETED' })
+          transactionApi.getOrdersByBuyer(user.id, { status: 'COMPLETED', page: 0, limit: 1000 })
         ]);
         
         if (refundsResponse.status === 'fulfilled') {

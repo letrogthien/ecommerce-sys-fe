@@ -50,7 +50,7 @@ const SecurityTab: React.FC = () => {
         setShowDisable2FA(true);
       } else {
         // Bật 2FA: chỉ cần gọi GET, OTP sẽ gửi qua email
-        
+        await apiClient.post('/api/v1/user-service/auth/enable-2fa');
         setTwoFAEnabled(true);
       }
     } catch (err: any) {

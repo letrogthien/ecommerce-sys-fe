@@ -251,13 +251,25 @@ export const createProduct = async (productData: ProductCreateRq): Promise<Produ
  */
 export const createProductVariant = async (variantData: VariantCreateRq): Promise<ProductVariantDto | null> => {
   try {
+    console.log('=== API CALL: createProductVariant ===');
+    console.log('URL:', '/api/v1/product-service/product-variants');
+    console.log('Payload being sent:', JSON.stringify(variantData, null, 2));
+    console.log('Payload type:', typeof variantData);
+    console.log('Payload keys:', Object.keys(variantData));
+    
     const response = await apiClientProduct.post<ApiResponseProductVariantDto>(
       '/api/v1/product-service/product-variants',
       variantData
     );
+    
+    console.log('API Response:', response.data);
+    console.log('=== API CALL COMPLETED ===');
+    
     return response.data.data || null;
   } catch (error) {
+    console.error('=== API CALL ERROR ===');
     console.error('Error creating product variant:', error);
+    console.error('Request data was:', variantData);
     throw error;
   }
 };

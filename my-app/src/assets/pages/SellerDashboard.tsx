@@ -2,12 +2,23 @@ import React, { useEffect, useState } from 'react';
 import type { components as ProductComponents } from '../../api-types/productService';
 import type { components as TransactionComponents } from '../../api-types/transactionService';
 import AddProductModal from '../../components/AddProductModal/AddProductModal';
+import AddVariantModal from '../../components/AddVariantModal/AddVariantModal';
 import EditProductModal from '../../components/EditProductModal/EditProductModal';
 import EditVariantModal from '../../components/EditVariantModal/EditVariantModal';
+import ImageManagerModal from '../../components/ImageManagerModal/ImageManagerModal';
 import OrderDetailsModal from '../../components/OrderDetailsModal/OrderDetailsModal';
 import UploadProofModal from '../../components/UploadProofModal/UploadProofModal';
 import { useUser } from '../../context/UserContext';
-import { deleteProduct, deleteProductVariant, getProductsBySeller, getVariantsByProduct } from '../../services/productApi';
+import {
+  createProductVariant,
+  deleteProduct,
+  deleteProductImage,
+  deleteProductVariant,
+  getProductImages,
+  getProductsBySeller,
+  getVariantsByProduct,
+  uploadProductImages
+} from '../../services/productApi';
 import {
   getAnalyticsOverview,
   getCustomerAnalytics,
@@ -19,6 +30,8 @@ import SellerRefundManagement from './SellerRefundManagement';
 
 type ProductDto = ProductComponents['schemas']['ProductDto'];
 type ProductVariantDto = ProductComponents['schemas']['ProductVariantDto'];
+type ProductImageDto = ProductComponents['schemas']['ProductImageDto'];
+type VariantCreateRq = ProductComponents['schemas']['VariantCreateRq'];
 type OrderDto = TransactionComponents['schemas']['OrderDto'];
 
 // Analytics Types
@@ -140,6 +153,18 @@ const SellerDashboard: React.FC = () => {
   const [editingVariant, setEditingVariant] = useState<{variant: ProductVariantDto, productId: string} | null>(null);
   const [isEditVariantModalOpen, setIsEditVariantModalOpen] = useState(false);
   const [deletingVariantId, setDeletingVariantId] = useState<string | null>(null);
+  
+  // New states for variant and image management
+  const [isAddVariantModalOpen, setIsAddVariantModalOpen] = useState(false);
+  const [addingVariantProductId, setAddingVariantProductId] = useState<string | null>(null);
+  const [creatingVariant, setCreatingVariant] = useState(false);
+  const [lastVariantSubmissionId, setLastVariantSubmissionId] = useState<string | null>(null);
+  const [isImageManagerOpen, setIsImageManagerOpen] = useState(false);
+  const [managingImagesProductId, setManagingImagesProductId] = useState<string | null>(null);
+  const [productImages, setProductImages] = useState<Record<string, ProductImageDto[]>>({});
+  const [imagesLoading, setImagesLoading] = useState<Record<string, boolean>>({});
+  const [uploadingImages, setUploadingImages] = useState<Record<string, boolean>>({});
+  const [deletingImageId, setDeletingImageId] = useState<string | null>(null);
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   
   // Order management states
@@ -337,6 +362,146 @@ const SellerDashboard: React.FC = () => {
     }
     
     setTimeout(() => setNotification(null), 3000);
+  };
+
+  // Add Variant Handler
+  const handleAddVariant = (productId: string) => {
+    setAddingVariantProductId(productId);
+    setIsAddVariantModalOpen(true);
+  };
+
+  const handleAddVariantSuccess = async () => {
+    if (!addingVariantProductId) return;
+    
+    // Refresh variants list for this product
+    try {
+      const variants = await getVariantsByProduct(addingVariantProductId);
+      setProductVariants(prev => ({
+        ...prev,
+        [addingVariantProductId]: variants
+      }));
+      
+      setNotification({ message: 'Biến thể đã được thêm thành công!', type: 'success' });
+    } catch (error) {
+      console.error('Error refreshing variants:', error);
+      setNotification({ message: 'Có lỗi xảy ra khi làm mới danh sách biến thể', type: 'error' });
+    }
+    
+    setTimeout(() => setNotification(null), 3000);
+    setIsAddVariantModalOpen(false);
+    setAddingVariantProductId(null);
+  };
+
+  const handleCreateVariant = async (variantData: VariantCreateRq) => {
+    // Create a unique submission ID based on variant data
+    const submissionId = `${variantData.productId}-${variantData.sku}-${JSON.stringify(variantData.attributes)}-${variantData.price}-${variantData.availableQty}`;
+    
+    console.log('=== SELLERDASHBOARD HANDLING CREATE VARIANT ===');
+    console.log('Timestamp:', new Date().toISOString());
+    console.log('Submission ID:', submissionId);
+    console.log('Last submission ID:', lastVariantSubmissionId);
+    console.log('Received variantData:', variantData);
+    console.log('Current addingVariantProductId:', addingVariantProductId);
+    console.log('Current creatingVariant state:', creatingVariant);
+    
+    // Check if we're already creating a variant OR if this is a duplicate submission
+    if (creatingVariant || submissionId === lastVariantSubmissionId) {
+      console.log('Already creating variant or duplicate submission, aborting...');
+      return;
+    }
+    
+    setLastVariantSubmissionId(submissionId);
+    setCreatingVariant(true);
+    
+    try {
+      console.log('Calling createProductVariant API...');
+      const result = await createProductVariant(variantData);
+      console.log('API result:', result);
+      
+      // Don't call handleAddVariantSuccess here to avoid double execution
+      // Instead, just refresh variants and show success message
+      console.log('Refreshing variants list...');
+      if (addingVariantProductId) {
+        const variants = await getVariantsByProduct(addingVariantProductId);
+        setProductVariants(prev => ({
+          ...prev,
+          [addingVariantProductId]: variants
+        }));
+      }
+      
+      setNotification({ message: 'Biến thể đã được thêm thành công!', type: 'success' });
+      setTimeout(() => setNotification(null), 3000);
+      console.log('=== VARIANT CREATION COMPLETED ===');
+    } catch (error) {
+      console.error('=== ERROR IN SELLERDASHBOARD CREATE VARIANT ===', error);
+      setNotification({ message: 'Có lỗi xảy ra khi tạo biến thể', type: 'error' });
+      setTimeout(() => setNotification(null), 3000);
+      throw error;
+    } finally {
+      setCreatingVariant(false);
+      // Clear the submission ID after a short delay to allow for new submissions
+      setTimeout(() => setLastVariantSubmissionId(null), 2000);
+    }
+  };
+
+  // Image Management Handlers
+  const handleManageImages = async (productId: string) => {
+    setManagingImagesProductId(productId);
+    setIsImageManagerOpen(true);
+    
+    // Load images if not already loaded
+    if (!productImages[productId]) {
+      setImagesLoading(prev => ({ ...prev, [productId]: true }));
+      try {
+        const images = await getProductImages(productId);
+        setProductImages(prev => ({ ...prev, [productId]: images }));
+      } catch (error) {
+        console.error('Error loading product images:', error);
+        setNotification({ message: 'Có lỗi xảy ra khi tải hình ảnh', type: 'error' });
+      } finally {
+        setImagesLoading(prev => ({ ...prev, [productId]: false }));
+      }
+    }
+  };
+
+  const handleUploadImages = async (productId: string, files: File[]) => {
+    if (files.length === 0) return;
+    
+    setUploadingImages(prev => ({ ...prev, [productId]: true }));
+    try {
+      await uploadProductImages(productId, files);
+      
+      // Refresh images
+      const images = await getProductImages(productId);
+      setProductImages(prev => ({ ...prev, [productId]: images }));
+      
+      setNotification({ message: 'Hình ảnh đã được tải lên thành công!', type: 'success' });
+    } catch (error) {
+      console.error('Error uploading images:', error);
+      setNotification({ message: 'Có lỗi xảy ra khi tải lên hình ảnh', type: 'error' });
+    } finally {
+      setUploadingImages(prev => ({ ...prev, [productId]: false }));
+      setTimeout(() => setNotification(null), 3000);
+    }
+  };
+
+  const handleDeleteImage = async (productId: string, imageId: string) => {
+    setDeletingImageId(imageId);
+    try {
+      await deleteProductImage(productId, imageId);
+      
+      // Refresh images
+      const images = await getProductImages(productId);
+      setProductImages(prev => ({ ...prev, [productId]: images }));
+      
+      setNotification({ message: 'Hình ảnh đã được xóa thành công!', type: 'success' });
+    } catch (error) {
+      console.error('Error deleting image:', error);
+      setNotification({ message: 'Có lỗi xảy ra khi xóa hình ảnh', type: 'error' });
+    } finally {
+      setDeletingImageId(null);
+      setTimeout(() => setNotification(null), 3000);
+    }
   };
 
   const handleDeleteVariant = async (variantId: string, variantSku: string, productId: string) => {
@@ -904,20 +1069,29 @@ const SellerDashboard: React.FC = () => {
                               </span>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                              <button 
-                                onClick={() => handleEditProduct(product)}
-                                className="text-blue-600 hover:text-blue-900 mr-3 disabled:opacity-50 disabled:cursor-not-allowed"
-                                disabled={deletingProductId === product.id}
-                              >
-                                Sửa
-                              </button>
-                              <button 
-                                onClick={() => handleDeleteProduct(product.id || '', product.name || '')}
-                                className="text-red-600 hover:text-red-900 disabled:opacity-50 disabled:cursor-not-allowed"
-                                disabled={deletingProductId === product.id}
-                              >
-                                {deletingProductId === product.id ? 'Đang xóa...' : 'Xóa'}
-                              </button>
+                              <div className="flex justify-end space-x-2">
+                                <button 
+                                  onClick={() => handleEditProduct(product)}
+                                  className="text-blue-600 hover:text-blue-900 disabled:opacity-50 disabled:cursor-not-allowed"
+                                  disabled={deletingProductId === product.id}
+                                >
+                                  Sửa
+                                </button>
+                                <button 
+                                  onClick={() => handleManageImages(product.id || '')}
+                                  className="text-purple-600 hover:text-purple-900 disabled:opacity-50 disabled:cursor-not-allowed"
+                                  disabled={deletingProductId === product.id}
+                                >
+                                  Hình ảnh
+                                </button>
+                                <button 
+                                  onClick={() => handleDeleteProduct(product.id || '', product.name || '')}
+                                  className="text-red-600 hover:text-red-900 disabled:opacity-50 disabled:cursor-not-allowed"
+                                  disabled={deletingProductId === product.id}
+                                >
+                                  {deletingProductId === product.id ? 'Đang xóa...' : 'Xóa'}
+                                </button>
+                              </div>
                             </td>
                           </tr>
                           
@@ -926,7 +1100,15 @@ const SellerDashboard: React.FC = () => {
                             <tr>
                               <td colSpan={6} className="px-6 py-4 bg-gray-50">
                                 <div className="pl-8">
-                                  <h4 className="text-sm font-medium text-gray-900 mb-3">Biến thể sản phẩm</h4>
+                                  <div className="flex justify-between items-center mb-3">
+                                    <h4 className="text-sm font-medium text-gray-900">Biến thể sản phẩm</h4>
+                                    <button
+                                      onClick={() => handleAddVariant(product.id || '')}
+                                      className="bg-green-600 text-white px-3 py-1 rounded text-xs hover:bg-green-700 transition-colors"
+                                    >
+                                      + Thêm biến thể
+                                    </button>
+                                  </div>
                                   
                                   {variantsLoading[product.id || ''] ? (
                                     <div className="text-center py-4">
@@ -1813,6 +1995,35 @@ const SellerDashboard: React.FC = () => {
         onSuccess={handleUploadProofSuccess}
         order={selectedOrder}
         sellerId={user?.id || ''}
+      />
+
+      {/* Add Variant Modal */}
+      <AddVariantModal
+        isOpen={isAddVariantModalOpen}
+        onClose={() => {
+          setIsAddVariantModalOpen(false);
+          setAddingVariantProductId(null);
+        }}
+        productId={addingVariantProductId || ''}
+        productName={allProducts.find((p: ProductDto) => p.id === addingVariantProductId)?.name || ''}
+        loading={creatingVariant}
+        onSubmit={handleCreateVariant}
+      />
+
+      {/* Image Manager Modal */}
+      <ImageManagerModal
+        isOpen={isImageManagerOpen}
+        onClose={() => {
+          setIsImageManagerOpen(false);
+          setManagingImagesProductId(null);
+        }}
+        productName={allProducts.find((p: ProductDto) => p.id === managingImagesProductId)?.name || ''}
+        images={productImages[managingImagesProductId || ''] || []}
+        loading={imagesLoading[managingImagesProductId || ''] || false}
+        uploading={uploadingImages[managingImagesProductId || ''] || false}
+        onUpload={(files) => handleUploadImages(managingImagesProductId || '', files)}
+        onDelete={(imageId) => handleDeleteImage(managingImagesProductId || '', imageId)}
+        deletingImageId={deletingImageId}
       />
     </div>
   );

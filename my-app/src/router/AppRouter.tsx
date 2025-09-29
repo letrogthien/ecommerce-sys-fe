@@ -44,6 +44,7 @@ import AdminSettings from '../assets/pages/AdminSettings';
 import AdminUserManagement from '../assets/pages/AdminUserManagement';
 import ProductSearch from '../assets/pages/ProductSearch';
 import RoutesOverview from '../assets/pages/RoutesOverview';
+import ResetPassword from '../assets/pages/ResetPassword';
 
 // Error boundary component
 const ErrorPage = () => {
@@ -175,6 +176,10 @@ const router = createBrowserRouter([
       {
         path: "routes-overview",
         element: <RoutesOverview />,
+      },
+      {
+        path: "reset-password",
+        element: <ResetPassword />,
       },
     ],
   },

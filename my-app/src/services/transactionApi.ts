@@ -473,7 +473,7 @@ export const getRefundsBySeller = async (sellerId: string, options?: {
  */
 export const approveRefund = async (refundId: string, sellerId: string, note?: string): Promise<OrderRefundDto> => {
     const response = await apiClient.put<ApiResponseOrderRefundDto>(
-        `/api/v1/transaction-service/refunds/${refundId}/approve`,
+        `/api/v1/transaction-service/refunds/seller/${refundId}/approve`,
         { sellerId, note }
     );
     
