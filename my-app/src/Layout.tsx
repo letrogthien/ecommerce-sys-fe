@@ -4,6 +4,7 @@ import Footer from "./assets/footer/Footer";
 import Header from "./assets/header/Header";
 import Breadcrumb from "./components/Breadcrumb/Breadcrumb";
 import WebSocketStatus from "./components/WebSocketStatus/WebSocketStatus";
+import { ChatWidget } from "./components/ChatWidget/ChatWidget";
 
 interface LayoutProps {
   children?: React.ReactNode;
@@ -20,6 +21,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       </main>
       <Footer />
       <WebSocketStatus />
+      <ChatWidget />
     </div>
   );
 };

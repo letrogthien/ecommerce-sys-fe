@@ -12,6 +12,19 @@ export default defineConfig({
   },
   server: {
     allowedHosts: ["wezd.io.vn", "auth.wezd.io.vn", "pay.wezd.io.vn"],
+    proxy: {
+      '/auth': {
+        target: 'http://localhost:8081',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/ws': {
+        target: 'ws://localhost:8082',
+        changeOrigin: true,
+        ws: true,
+        secure: false,
+      },
+    },
   },
   define: {
     global: 'globalThis',
