@@ -1,0 +1,49 @@
+# Dependencies
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+package-lock.json
+
+# Build outputs
+dist
+dist-ssr
+build
+
+# Environment files (will be provided via build args)
+.env
+.env.local
+.env.*.local
+.env.development
+.env.production
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# IDE/Editor
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Test & Coverage
+coverage
+.nyc_output
+*.test.*
+*.spec.*
+
+# Documentation
+README.md
+*.md
+!package.json
+
+# Misc
+*.local
+.cache
+.temp
+.tmp
