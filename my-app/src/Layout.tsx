@@ -3,8 +3,8 @@ import { Outlet } from "react-router-dom";
 import Footer from "./assets/footer/Footer";
 import Header from "./assets/header/Header";
 import Breadcrumb from "./components/Breadcrumb/Breadcrumb";
-import WebSocketStatus from "./components/WebSocketStatus/WebSocketStatus";
 import { ChatWidget } from "./components/ChatWidget/ChatWidget";
+import WebSocketStatus from "./components/WebSocketStatus/WebSocketStatus";
 
 interface LayoutProps {
   children?: React.ReactNode;

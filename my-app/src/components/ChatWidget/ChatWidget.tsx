@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
-import './ChatWidget.css';
-import { initGuestSession } from '../../services/guestSessionService';
+import React, { useEffect, useRef, useState } from 'react';
 import { guestChatService, type ChatMessage } from '../../services/guestChatService';
+import { initGuestSession } from '../../services/guestSessionService';
+import './ChatWidget.css';
 
 interface DisplayMessage {
   text: string;

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { initGuestSession, getGuestUUID, getGuestToken } from '../services/guestSessionService';
 import { guestChatService } from '../services/guestChatService';
+import { getGuestToken, getGuestUUID, initGuestSession } from '../services/guestSessionService';
 
 export const ChatDebug: React.FC = () => {
   const [uuid, setUuid] = useState<string | null>(null);
